@@ -1,8 +1,6 @@
 package com.alibaba.qlexpress4.test.cache;
 
 import com.alibaba.qlexpress4.cache.LRUCache;
-import com.alibaba.qlexpress4.cache.LRUCache2;
-import com.alibaba.qlexpress4.cache.LRUCache3;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -18,25 +16,25 @@ import java.util.stream.IntStream;
  * @Date 2022/6/8 下午12:24
  */
 public class TestLRU {
-    @Test
-    public void runMultiThreadTask_WhenPutDataInConcurrentToCache_ThenNoDataLost() throws Exception {
-        final int size = 1000000;
-        final int maxSize = 1000;
-        final ExecutorService executorService = Executors.newFixedThreadPool(32);
-        LRUCache3<Integer, String> cache = new LRUCache3(32,maxSize);
-        CountDownLatch countDownLatch = new CountDownLatch(size);
-        try {
-            IntStream.range(0, size).<Runnable>mapToObj(key -> () -> {
-                cache.put(key, "value" + key);
-                countDownLatch.countDown();
-            }).forEach(executorService::submit);
-            countDownLatch.await(1, TimeUnit.SECONDS);
-        } finally {
-            executorService.shutdown();
-        }
-//        Assert.assertEquals(cache.size(), size);
-//        IntStream.range(0, size).forEach(i -> Assert.assertEquals("value" + i,cache.get(i)));
-    }
+//    @Test
+//    public void runMultiThreadTask_WhenPutDataInConcurrentToCache_ThenNoDataLost() throws Exception {
+//        final int size = 1000000;
+//        final int maxSize = 1000;
+//        final ExecutorService executorService = Executors.newFixedThreadPool(32);
+//        LRUCache3<Integer, String> cache = new LRUCache3(32,maxSize);
+//        CountDownLatch countDownLatch = new CountDownLatch(size);
+//        try {
+//            IntStream.range(0, size).<Runnable>mapToObj(key -> () -> {
+//                cache.put(key, "value" + key);
+//                countDownLatch.countDown();
+//            }).forEach(executorService::submit);
+//            countDownLatch.await(1, TimeUnit.SECONDS);
+//        } finally {
+//            executorService.shutdown();
+//        }
+////        Assert.assertEquals(cache.size(), size);
+////        IntStream.range(0, size).forEach(i -> Assert.assertEquals("value" + i,cache.get(i)));
+//    }
 
 
 //    @Test
