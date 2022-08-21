@@ -1,23 +1,31 @@
-package com.alibaba.qlexpress4.runtime.operator.assign;
+package com.alibaba.qlexpress4.runtime.operator.arithmetic;
 
+import com.alibaba.qlexpress4.QLPrecedences;
 import com.alibaba.qlexpress4.exception.ErrorReporter;
 import com.alibaba.qlexpress4.runtime.LeftValue;
 import com.alibaba.qlexpress4.runtime.Value;
 import com.alibaba.qlexpress4.runtime.operator.base.BaseBinaryOperator;
-import com.alibaba.qlexpress4.runtime.operator.constant.OperatorPriority;
 
 /**
  * @author 冰够
  */
 public class PlusAssignOperator extends BaseBinaryOperator {
+    private static final PlusAssignOperator INSTANCE = new PlusAssignOperator();
+
+    private PlusAssignOperator() {
+    }
+
+    public static PlusAssignOperator getInstance() {
+        return INSTANCE;
+    }
+
     @Override
     public Object execute(Value left, Value right, ErrorReporter errorReporter) {
+        assertLeftValue(left, errorReporter);
         LeftValue leftValue = (LeftValue)left;
-        // TODO bingo parse阶段实现？不然我的new PlusOperator，然后把left和right传入进行计算
-        //int newValue = left.get() + right.get();
-        //leftValue.set(newValue);
-        //return newValue;
-        return null;
+        Object result = plus(left, right, errorReporter);
+        leftValue.set(result, errorReporter);
+        return result;
     }
 
     @Override
@@ -27,6 +35,6 @@ public class PlusAssignOperator extends BaseBinaryOperator {
 
     @Override
     public int getPriority() {
-        return OperatorPriority.PRIORITY_0;
+        return QLPrecedences.ASSIGN;
     }
 }

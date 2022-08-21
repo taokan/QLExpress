@@ -1,9 +1,12 @@
 package com.alibaba.qlexpress4.runtime.operator.logic;
 
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
+import com.alibaba.qlexpress4.QLPrecedences;
 import com.alibaba.qlexpress4.exception.ErrorReporter;
 import com.alibaba.qlexpress4.runtime.Value;
 import com.alibaba.qlexpress4.runtime.operator.base.BaseBinaryOperator;
-import com.alibaba.qlexpress4.runtime.operator.constant.OperatorPriority;
 
 /**
  * TODO bingo null 如何处理？
@@ -13,6 +16,23 @@ import com.alibaba.qlexpress4.runtime.operator.constant.OperatorPriority;
  * @author 冰够
  */
 public class LogicOrOperator extends BaseBinaryOperator {
+    private static final Map<String, LogicOrOperator> INSTANCE_CACHE = new ConcurrentHashMap<>(2);
+
+    static {
+        INSTANCE_CACHE.put("||", new LogicOrOperator("||"));
+        INSTANCE_CACHE.put("or", new LogicOrOperator("or"));
+    }
+
+    private final String operator;
+
+    private LogicOrOperator(String operator) {
+        this.operator = operator;
+    }
+
+    public static LogicOrOperator getInstance(String operator) {
+        return INSTANCE_CACHE.get(operator);
+    }
+
     @Override
     public Object execute(Value left, Value right, ErrorReporter errorReporter) {
         Object leftValue = left.get();
@@ -40,6 +60,6 @@ public class LogicOrOperator extends BaseBinaryOperator {
 
     @Override
     public int getPriority() {
-        return OperatorPriority.PRIORITY_2;
+        return QLPrecedences.OR;
     }
 }

@@ -1,14 +1,21 @@
 package com.alibaba.qlexpress4.runtime.operator.compare;
 
-import com.alibaba.qlexpress4.runtime.operator.constant.OperatorPriority;
+import com.alibaba.qlexpress4.QLPrecedences;
+import com.alibaba.qlexpress4.exception.ErrorReporter;
+import com.alibaba.qlexpress4.runtime.Value;
+import com.alibaba.qlexpress4.runtime.operator.base.BaseBinaryOperator;
 
 /**
  * @author 冰够
  */
-public class UnequalOperator extends CompareOperator {
-    @Override
-    protected boolean execute(int compareResult) {
-        return compareResult != 0;
+public class UnequalOperator extends BaseBinaryOperator {
+    private static final UnequalOperator INSTANCE = new UnequalOperator();
+
+    private UnequalOperator() {
+    }
+
+    public static UnequalOperator getInstance() {
+        return INSTANCE;
     }
 
     @Override
@@ -18,6 +25,11 @@ public class UnequalOperator extends CompareOperator {
 
     @Override
     public int getPriority() {
-        return OperatorPriority.PRIORITY_7;
+        return QLPrecedences.EQUAL;
+    }
+
+    @Override
+    public Object execute(Value left, Value right, ErrorReporter errorReporter) {
+        return compare(left, right, errorReporter) != 0;
     }
 }

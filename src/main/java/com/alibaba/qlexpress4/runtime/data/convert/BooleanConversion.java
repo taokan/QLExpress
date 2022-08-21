@@ -1,6 +1,5 @@
 package com.alibaba.qlexpress4.runtime.data.convert;
 
-
 import com.alibaba.qlexpress4.runtime.data.implicit.QLConvertResult;
 import com.alibaba.qlexpress4.runtime.data.implicit.QLConvertResultType;
 
@@ -12,7 +11,7 @@ public class BooleanConversion {
     public static QLConvertResult trans(Object object) {
         //delete null to boolean
         if (object instanceof Boolean) {
-            return new QLConvertResult(QLConvertResultType.CAN_TRANS,(Boolean) object);
+            return new QLConvertResult(QLConvertResultType.CAN_TRANS, object);
         }
         return new QLConvertResult(QLConvertResultType.NOT_TRANS, null);
     }
