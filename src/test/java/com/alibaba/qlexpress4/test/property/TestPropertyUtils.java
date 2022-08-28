@@ -23,8 +23,8 @@ public class TestPropertyUtils {
 //          System.out.println(Child7.class.toString());
 //          System.out.println(StringConversion.trans(Child7.class).getCastValue());
 //
-          Express4Runner express4Runner = new Express4Runner(InitOptions.builder().build());
-          Child10 as = new Child10();
+//          Express4Runner express4Runner = new Express4Runner(InitOptions.builder().build());
+//          Child10 as = new Child10();
 //         express4Runner.addFunction("test", as::setAA);
 //        express4Runner.addFunction("test", (Function<Integer[], Integer>) as::setAAA, Integer.class);
 //        express4Runner.addFunction("test", (QLFunctionalVarargs<Object, Object>) as::setAAAA, String.class,Integer.class);
@@ -89,5 +89,7 @@ public class TestPropertyUtils {
 //        Assert.assertTrue(Parent.staticSet.equals("st1"));
 //
 //        Assert.assertTrue(PropertiesUtil.getPropertyValue(c, "booValue", false).equals(true));
+        Class s = void.class;
+        System.out.println(s.isPrimitive());
     }
 }

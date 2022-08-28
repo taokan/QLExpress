@@ -13,8 +13,8 @@ public class QLPrimitiveParametersChecker implements MatchChecker {
 
     @Override
     public boolean typeMatch(Class<?> source, Class<?> target) {
-        Class<?> sourcePrimitive = source.isPrimitive() ? source : BasicUtil.transToPrimitive(source);
-        Class<?> targetPrimitive = target.isPrimitive() ? target : BasicUtil.transToPrimitive(target);
+        Class<?> sourcePrimitive = BasicUtil.isPrimitive(source) ? source : BasicUtil.transToPrimitive(source);
+        Class<?> targetPrimitive = BasicUtil.isPrimitive(target) ? target : BasicUtil.transToPrimitive(target);
         return sourcePrimitive != null && targetPrimitive != null && BasicUtil.classMatchImplicit(targetPrimitive, sourcePrimitive);
     }
 

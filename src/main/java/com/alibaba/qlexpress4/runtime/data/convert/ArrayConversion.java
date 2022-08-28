@@ -7,6 +7,7 @@ import com.alibaba.qlexpress4.runtime.data.checker.convertchecker.array.QLArrayI
 import com.alibaba.qlexpress4.runtime.data.checker.convertchecker.array.QLArrayLongStreamConvertChecker;
 import com.alibaba.qlexpress4.runtime.data.implicit.QLConvertResult;
 import com.alibaba.qlexpress4.runtime.data.implicit.QLConvertResultType;
+import com.alibaba.qlexpress4.utils.BasicUtil;
 
 import java.lang.reflect.Array;
 import java.util.*;
@@ -91,7 +92,7 @@ public class ArrayConversion {
     }
 
     public static Collection arrayToCollection(Object value) {
-        if (value.getClass().getComponentType().isPrimitive()) {
+        if (BasicUtil.isPrimitive(value.getClass().getComponentType())) {
             return primitiveArrayToList(value);
         }
         return arrayToCollection((Object[]) value);
@@ -102,7 +103,7 @@ public class ArrayConversion {
         List list = new ArrayList(size);
         for (int i = 0; i < size; i++) {
             Object item = Array.get(array, i);
-            if (item != null && item.getClass().isArray() && item.getClass().getComponentType().isPrimitive()) {
+            if (item != null && item.getClass().isArray() && BasicUtil.isPrimitive(item.getClass().getComponentType())) {
                 item = primitiveArrayToList(item);
             }
             list.add(item);

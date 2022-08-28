@@ -4,6 +4,7 @@ import com.alibaba.qlexpress4.runtime.data.checker.TypeConvertChecker;
 import com.alibaba.qlexpress4.runtime.data.checker.convertchecker.number.*;
 import com.alibaba.qlexpress4.runtime.data.implicit.QLConvertResult;
 import com.alibaba.qlexpress4.runtime.data.implicit.QLConvertResultType;
+import com.alibaba.qlexpress4.utils.BasicUtil;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -40,7 +41,7 @@ public class QLNumberConvertChecker implements TypeConvertChecker<Object> {
 
     @Override
     public boolean typeCheck(Object value, Class<?> type) {
-        return Number.class.isAssignableFrom(type) || type.isPrimitive();
+        return Number.class.isAssignableFrom(type) || BasicUtil.isPrimitive(type);
     }
 
     @Override

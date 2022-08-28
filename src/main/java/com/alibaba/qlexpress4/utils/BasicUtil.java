@@ -29,21 +29,35 @@ public class BasicUtil {
     public static final int DEFAULT_MATCH_INDEX = -1;
     public static final int DEFAULT_WEIGHT = Integer.MAX_VALUE;
 
-    private static final Map<Class<?>,Class<?>> primitiveMap;
+    private static final Map<Class<?>,Class<?>> primitiveTransMap;
+    private static final Map<Class<?>,Integer> primitiveMap;
     private static final Map<Class<?>,Integer> classMatchImplicit;
     private static final Map<Class<?>,Integer> classMatchImplicitExtend;
 
+    static{
+        primitiveMap = new HashMap<>(9);
+        primitiveMap.put(boolean.class, 1);
+        primitiveMap.put(char.class,1);
+        primitiveMap.put(double.class,1);
+        primitiveMap.put(float.class,1);
+        primitiveMap.put(int.class,1);
+        primitiveMap.put(long.class,1);
+        primitiveMap.put(byte.class,1);
+        primitiveMap.put(short.class,1);
+        primitiveMap.put(void.class,1);
+    }
 
     static{
-        primitiveMap = new HashMap<>(8);
-        primitiveMap.put(Boolean.class,boolean.class);
-        primitiveMap.put(Character.class,char.class);
-        primitiveMap.put(Double.class,double.class);
-        primitiveMap.put(Float.class,float.class);
-        primitiveMap.put(Integer.class,int.class);
-        primitiveMap.put(Long.class,long.class);
-        primitiveMap.put(Byte.class,byte.class);
-        primitiveMap.put(Short.class,short.class);
+        primitiveTransMap = new HashMap<>(9);
+        primitiveTransMap.put(Boolean.class,boolean.class);
+        primitiveTransMap.put(Character.class,char.class);
+        primitiveTransMap.put(Double.class,double.class);
+        primitiveTransMap.put(Float.class,float.class);
+        primitiveTransMap.put(Integer.class,int.class);
+        primitiveTransMap.put(Long.class,long.class);
+        primitiveTransMap.put(Byte.class,byte.class);
+        primitiveTransMap.put(Short.class,short.class);
+        primitiveTransMap.put(Void.class,void.class);
     }
 
     static {
@@ -74,10 +88,13 @@ public class BasicUtil {
         classMatchImplicitExtend.put(byte.class,0);
     }
 
+    public static boolean isPrimitive(Class<?> clazz){
+        return primitiveMap.get(clazz) == null ? false : true;
+    }
 
 
     public static Class<?> transToPrimitive(Class<?> clazz){
-        return primitiveMap.get(clazz);
+        return primitiveTransMap.get(clazz);
     }
 
 
