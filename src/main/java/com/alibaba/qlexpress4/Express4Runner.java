@@ -66,12 +66,12 @@ public class Express4Runner {
         QLambda mainLambda = parseToLambda(script, context, qlOptions);
         try {
             mainLambda.call();
+            return new QPrepareResult(true);
         } catch (QLException e) {
             return new QPrepareResult(false, e.getReason());
         } catch (Exception nuKnown) {
             return new QPrepareResult(false, nuKnown.getMessage());
         }
-        return new QPrepareResult(true);
     }
 
     public void addFunction(String name, QFunction function) {
