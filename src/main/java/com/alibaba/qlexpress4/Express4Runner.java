@@ -23,6 +23,7 @@ import com.alibaba.qlexpress4.parser.tree.Program;
 import com.alibaba.qlexpress4.runtime.*;
 import com.alibaba.qlexpress4.runtime.data.DataValue;
 import com.alibaba.qlexpress4.runtime.data.lambda.QLambdaMethod;
+import com.alibaba.qlexpress4.runtime.data.result.QPrepareResult;
 import com.alibaba.qlexpress4.runtime.operator.CustomBinaryOperator;
 import com.alibaba.qlexpress4.runtime.operator.OperatorManager;
 import com.alibaba.qlexpress4.utils.CacheUtil;
@@ -59,6 +60,18 @@ public class Express4Runner {
             // should not run here
             throw new RuntimeException(nuKnown);
         }
+    }
+
+    public QPrepareResult preExecute(String script, Map<String, Object> context, QLOptions qlOptions) throws QLException {
+        QLambda mainLambda = parseToLambda(script, context, qlOptions);
+        try {
+            mainLambda.call();
+        } catch (QLException e) {
+            return new QPrepareResult(false, e.getReason());
+        } catch (Exception nuKnown) {
+            return new QPrepareResult(false, nuKnown.getMessage());
+        }
+        return new QPrepareResult(true);
     }
 
     public void addFunction(String name, QFunction function) {
