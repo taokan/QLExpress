@@ -44,6 +44,43 @@ public class DemoShowTest {
         runner.execute("sum=0;for(i=0;i<10;i=i+1){for(j=0;j<10;j++){sum=sum+i+j;}}", context, null, false, true);
     }
 
+
+    /**
+     * foreach循环
+     *
+     * @throws Exception
+     */
+    @Test
+    public void testForeachLoop3() throws Exception {
+        ExpressRunner runner = new ExpressRunner(true, true);
+        DefaultContext<String, Object> context = new DefaultContext<>();
+        runner.execute("sum=0;list=[1,2,3,4];for(i=0;i<list.length;i=i+1){sum=sum+i;}", context, null, true, true);
+    }
+
+    /**
+     * foreach循环
+     *
+     * @throws Exception
+     */
+    @Test
+    public void testForeachLoop() throws Exception {
+        ExpressRunner runner = new ExpressRunner(true, true);
+        DefaultContext<String, Object> context = new DefaultContext<>();
+        runner.execute("sum=0;list=[1,2,3,4];for(i:list){sum=sum+i;}", context, null, true, true);
+    }
+
+    /**
+     * foreach循环
+     *
+     * @throws Exception
+     */
+    @Test
+    public void testForeachLoopExpressionArray() throws Exception {
+        ExpressRunner runner = new ExpressRunner(true, true);
+        DefaultContext<String, Object> context = new DefaultContext<>();
+        runner.execute("sum=0;for(i:[1,2,3,4]){sum=sum+i;}", context, null, true, true);
+    }
+
     /**
      * 汉诺塔算法
      *

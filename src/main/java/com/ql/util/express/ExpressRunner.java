@@ -105,7 +105,7 @@ public class ExpressRunner {
     private AppendingClassFieldManager appendingClassFieldManager;
 
     private final ThreadLocal<IOperateDataCache> operateDataCacheThreadLocal = ThreadLocal.withInitial(
-        () -> new OperateDataCacheImpl(30));
+            () -> new OperateDataCacheImpl(30));
 
     public IOperateDataCache getOperateDataCache() {
         return this.operateDataCacheThreadLocal.get();
@@ -133,7 +133,7 @@ public class ExpressRunner {
      * @param iExpressResourceLoader 表达式的资源装载器
      */
     public ExpressRunner(boolean isPrecise, boolean isTrace, IExpressResourceLoader iExpressResourceLoader,
-        NodeTypeManager nodeTypeManager) {
+                         NodeTypeManager nodeTypeManager) {
         this.isTrace = isTrace;
         this.isPrecise = isPrecise;
         this.expressResourceLoader = iExpressResourceLoader;
@@ -208,15 +208,15 @@ public class ExpressRunner {
     /**
      * 装载表达式，但不执行，例如一些宏定义，或者自定义函数
      *
-     * @param expressName
+     * @param groupName
      * @param express
      * @throws Exception
      */
-    public void loadMultiExpress(String expressName, String express) throws Exception {
-        if (expressName == null || expressName.trim().length() == 0) {
-            expressName = GLOBAL_DEFINE_NAME;
+    public void loadMultiExpress(String groupName, String express) throws Exception {
+        if (groupName == null || groupName.trim().length() == 0) {
+            groupName = GLOBAL_DEFINE_NAME;
         }
-        this.loader.parseInstructionSet(expressName, express);
+        this.loader.parseInstructionSet(groupName, express);
     }
 
     /**
@@ -313,9 +313,9 @@ public class ExpressRunner {
      * @throws Exception
      */
     public void addFunctionOfClassMethod(String name, String className, String functionName,
-        Class<?>[] parameterClassTypes, String errorInfo) throws Exception {
+                                         Class<?>[] parameterClassTypes, String errorInfo) throws Exception {
         OperatorSelfDefineClassFunction operatorSelfDefineClassFunction = new OperatorSelfDefineClassFunction(name,
-            className, functionName, parameterClassTypes, null, null, errorInfo);
+                className, functionName, parameterClassTypes, null, null, errorInfo);
         this.addFunction(name, operatorSelfDefineClassFunction);
     }
 
@@ -330,9 +330,9 @@ public class ExpressRunner {
      * @throws Exception
      */
     public void addFunctionOfClassMethod(String name, Class<?> clazz, String functionName,
-        Class<?>[] parameterClassTypes, String errorInfo) throws Exception {
+                                         Class<?>[] parameterClassTypes, String errorInfo) throws Exception {
         OperatorSelfDefineClassFunction operatorSelfDefineClassFunction = new OperatorSelfDefineClassFunction(name,
-            clazz, functionName, parameterClassTypes, null, null, errorInfo);
+                clazz, functionName, parameterClassTypes, null, null, errorInfo);
         this.addFunction(name, operatorSelfDefineClassFunction);
     }
 
@@ -349,10 +349,10 @@ public class ExpressRunner {
      * @throws Exception
      */
     public void addFunctionOfClassMethod(String name, String className, String functionName,
-        Class<?>[] parameterClassTypes, String[] parameterDesc, String[] parameterAnnotation, String errorInfo)
-        throws Exception {
+                                         Class<?>[] parameterClassTypes, String[] parameterDesc, String[] parameterAnnotation, String errorInfo)
+            throws Exception {
         OperatorSelfDefineClassFunction operatorSelfDefineClassFunction = new OperatorSelfDefineClassFunction(name,
-            className, functionName, parameterClassTypes, parameterDesc, parameterAnnotation, errorInfo);
+                className, functionName, parameterClassTypes, parameterDesc, parameterAnnotation, errorInfo);
         this.addFunction(name, operatorSelfDefineClassFunction);
     }
 
@@ -367,9 +367,9 @@ public class ExpressRunner {
      * @throws Exception
      */
     public void addFunctionOfClassMethod(String name, String className, String functionName, String[] parameterTypes,
-        String errorInfo) throws Exception {
+                                         String errorInfo) throws Exception {
         OperatorSelfDefineClassFunction operatorSelfDefineClassFunction = new OperatorSelfDefineClassFunction(name,
-            className, functionName, parameterTypes, null, null, errorInfo);
+                className, functionName, parameterTypes, null, null, errorInfo);
         this.addFunction(name, operatorSelfDefineClassFunction);
     }
 
@@ -386,9 +386,9 @@ public class ExpressRunner {
      * @throws Exception
      */
     public void addFunctionOfClassMethod(String name, String className, String functionName, String[] parameterTypes,
-        String[] parameterDesc, String[] parameterAnnotation, String errorInfo) throws Exception {
+                                         String[] parameterDesc, String[] parameterAnnotation, String errorInfo) throws Exception {
         OperatorSelfDefineClassFunction operatorSelfDefineClassFunction = new OperatorSelfDefineClassFunction(name,
-            className, functionName, parameterTypes, parameterDesc, parameterAnnotation, errorInfo);
+                className, functionName, parameterTypes, parameterDesc, parameterAnnotation, errorInfo);
         this.addFunction(name, operatorSelfDefineClassFunction);
     }
 
@@ -403,9 +403,9 @@ public class ExpressRunner {
      * @throws Exception
      */
     public void addFunctionOfServiceMethod(String name, Object serviceObject, String functionName,
-        Class<?>[] parameterClassTypes, String errorInfo) throws Exception {
+                                           Class<?>[] parameterClassTypes, String errorInfo) throws Exception {
         OperatorSelfDefineServiceFunction operatorSelfDefineServiceFunction = new OperatorSelfDefineServiceFunction(
-            name, serviceObject, functionName, parameterClassTypes, null, null, errorInfo);
+                name, serviceObject, functionName, parameterClassTypes, null, null, errorInfo);
         this.addFunction(name, operatorSelfDefineServiceFunction);
     }
 
@@ -422,10 +422,10 @@ public class ExpressRunner {
      * @throws Exception
      */
     public void addFunctionOfServiceMethod(String name, Object serviceObject, String functionName,
-        Class<?>[] parameterClassTypes, String[] parameterDesc, String[] parameterAnnotation, String errorInfo)
-        throws Exception {
+                                           Class<?>[] parameterClassTypes, String[] parameterDesc, String[] parameterAnnotation, String errorInfo)
+            throws Exception {
         OperatorSelfDefineServiceFunction operatorSelfDefineServiceFunction = new OperatorSelfDefineServiceFunction(
-            name, serviceObject, functionName, parameterClassTypes, parameterDesc, parameterAnnotation, errorInfo);
+                name, serviceObject, functionName, parameterClassTypes, parameterDesc, parameterAnnotation, errorInfo);
         this.addFunction(name, operatorSelfDefineServiceFunction);
     }
 
@@ -440,17 +440,17 @@ public class ExpressRunner {
      * @throws Exception
      */
     public void addFunctionOfServiceMethod(String name, Object serviceObject, String functionName,
-        String[] parameterTypes, String errorInfo) throws Exception {
+                                           String[] parameterTypes, String errorInfo) throws Exception {
         OperatorSelfDefineServiceFunction operatorSelfDefineServiceFunction = new OperatorSelfDefineServiceFunction(
-            name, serviceObject, functionName, parameterTypes, null, null, errorInfo);
+                name, serviceObject, functionName, parameterTypes, null, null, errorInfo);
         this.addFunction(name, operatorSelfDefineServiceFunction);
     }
 
     public void addFunctionOfServiceMethod(String name, Object serviceObject, String functionName,
-        String[] parameterTypes, String[] parameterDesc, String[] parameterAnnotation, String errorInfo)
-        throws Exception {
+                                           String[] parameterTypes, String[] parameterDesc, String[] parameterAnnotation, String errorInfo)
+            throws Exception {
         OperatorSelfDefineServiceFunction operatorSelfDefineServiceFunction = new OperatorSelfDefineServiceFunction(
-            name, serviceObject, functionName, parameterTypes, parameterDesc, parameterAnnotation, errorInfo);
+                name, serviceObject, functionName, parameterTypes, parameterDesc, parameterAnnotation, errorInfo);
         this.addFunction(name, operatorSelfDefineServiceFunction);
     }
 
@@ -549,9 +549,9 @@ public class ExpressRunner {
      * @throws Exception
      */
     public Object executeByExpressName(String name, IExpressContext<String, Object> context, List<String> errorList,
-        boolean isTrace, boolean isCatchException, Log log) throws Exception {
+                                       boolean isTrace, boolean isCatchException, Log log) throws Exception {
         return InstructionSetRunner.executeOuter(this, this.loader.getInstructionSet(name), this.loader, context,
-            errorList, isTrace, isCatchException, log, false);
+                errorList, isTrace, isCatchException, log, false);
     }
 
     ///**
@@ -588,9 +588,9 @@ public class ExpressRunner {
      * @throws Exception
      */
     public Object execute(InstructionSet instructionSet, IExpressContext<String, Object> context,
-        List<String> errorList, boolean isTrace, boolean isCatchException, Log log) throws Exception {
+                          List<String> errorList, boolean isTrace, boolean isCatchException, Log log) throws Exception {
         return InstructionSetRunner.executeOuter(this, instructionSet, this.loader, context, errorList,
-            isTrace, isCatchException, log, false);
+                isTrace, isCatchException, log, false);
     }
 
     /**
@@ -606,7 +606,7 @@ public class ExpressRunner {
      * @throws Exception
      */
     public Object execute(String expressString, IExpressContext<String, Object> context, List<String> errorList,
-        boolean isCache, boolean isTrace, long timeoutMillis) throws Exception {
+                          boolean isCache, boolean isTrace, long timeoutMillis) throws Exception {
         //设置超时毫秒时间
         QLExpressTimer.setTimer(timeoutMillis);
         try {
@@ -628,7 +628,7 @@ public class ExpressRunner {
      * @throws Exception
      */
     public Object execute(String expressString, IExpressContext<String, Object> context, List<String> errorList,
-        boolean isCache, boolean isTrace) throws Exception {
+                          boolean isCache, boolean isTrace) throws Exception {
         return this.execute(expressString, context, errorList, isCache, isTrace, null);
     }
 
@@ -645,7 +645,7 @@ public class ExpressRunner {
      * @throws Exception
      */
     public Object execute(String expressString, IExpressContext<String, Object> context, List<String> errorList,
-        boolean isCache, boolean isTrace, Log log) throws Exception {
+                          boolean isCache, boolean isTrace, Log log) throws Exception {
         InstructionSet parseResult;
         if (isCache) {
             parseResult = expressInstructionSetCache.get(expressString);
@@ -665,17 +665,17 @@ public class ExpressRunner {
     }
 
     private Object executeReentrant(InstructionSet sets, IExpressContext<String, Object> iExpressContext,
-        List<String> errorList, boolean isTrace, Log log) throws Exception {
+                                    List<String> errorList, boolean isTrace, Log log) throws Exception {
         try {
             int reentrantCount = threadReentrantCount.get() + 1;
             threadReentrantCount.set(reentrantCount);
 
             return reentrantCount > 1 ?
-                // 线程重入
-                InstructionSetRunner.execute(this, sets, this.loader, iExpressContext, errorList, isTrace, false, true,
-                    log, false) :
-                InstructionSetRunner.executeOuter(this, sets, this.loader, iExpressContext, errorList, isTrace, false,
-                    log, false);
+                    // 线程重入
+                    InstructionSetRunner.execute(this, sets, this.loader, iExpressContext, errorList, isTrace, false, true,
+                            log, false) :
+                    InstructionSetRunner.executeOuter(this, sets, this.loader, iExpressContext, errorList, isTrace, false,
+                            log, false);
         } finally {
             threadReentrantCount.set(threadReentrantCount.get() - 1);
         }
@@ -755,7 +755,7 @@ public class ExpressRunner {
     }
 
     public boolean createInstructionSetPrivate(InstructionSet result, Stack<ForRelBreakContinue> forStack,
-        ExpressNode node, boolean isRoot) throws Exception {
+                                               ExpressNode node, boolean isRoot) throws Exception {
         InstructionFactory factory = InstructionFactory.getInstructionFactory(node.getInstructionFactory());
         return factory.createInstruction(this, result, forStack, node, isRoot);
     }
@@ -823,7 +823,7 @@ public class ExpressRunner {
             }
             Word[] words = this.parse.splitWords(text, isTrace, selfDefineClass);
             ExpressNode root = this.parse.parse(this.rootExpressPackage, words, text, isTrace, selfDefineClass,
-                mockRemoteJavaClass);
+                    mockRemoteJavaClass);
             InstructionSet result = createInstructionSet(root, "main");
             if (this.isTrace && log.isDebugEnabled()) {
                 log.debug(result);
