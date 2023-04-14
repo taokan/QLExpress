@@ -1,24 +1,15 @@
 package com.ql.util.express;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
-
 import com.ql.util.express.config.QLExpressTimer;
 import com.ql.util.express.exception.QLException;
 import com.ql.util.express.instruction.FunctionInstructionSet;
 import com.ql.util.express.instruction.OperateDataCacheManager;
-import com.ql.util.express.instruction.detail.Instruction;
-import com.ql.util.express.instruction.detail.InstructionCallSelfDefineFunction;
-import com.ql.util.express.instruction.detail.InstructionConstData;
-import com.ql.util.express.instruction.detail.InstructionLoadAttr;
-import com.ql.util.express.instruction.detail.InstructionNewVirClass;
-import com.ql.util.express.instruction.detail.InstructionOperator;
+import com.ql.util.express.instruction.detail.*;
 import com.ql.util.express.instruction.opdata.OperateDataLocalVar;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+
+import java.util.*;
 
 /**
  * 表达式执行编译后形成的指令集合
@@ -100,17 +91,22 @@ public class InstructionSet {
         for (int i = 0; i < instructionList.length; i++) {
             Instruction instruction = instructionList[i];
             if (instruction instanceof InstructionOperator) {
-                String opName = ((InstructionOperator)instruction).getOperator().getName();
+                String opName = ((InstructionOperator) instruction).getOperator().getName();
                 //addOperator(op)中op.name有可能为空
                 if (opName != null) {
                     if ("def".equalsIgnoreCase(opName) || "exportDef".equalsIgnoreCase(opName)) {
-                        String varLocalName = (String)((InstructionConstData)instructionList[i - 1]).getOperateData()
-                            .getObject(null);
+                        String varLocalName = (String) ((InstructionConstData) instructionList[i - 1]).getOperateData()
+                                .getObject(null);
                         result.remove(varLocalName);
                     } else if ("alias".equalsIgnoreCase(opName) || "exportAlias".equalsIgnoreCase(opName)) {
-                        String varLocalName = (String)((InstructionConstData)instructionList[i - 2]).getOperateData()
-                            .getObject(null);
+                        String varLocalName = (String) ((InstructionConstData) instructionList[i - 2]).getOperateData()
+                                .getObject(null);
                         result.remove(varLocalName);
+                    } else if ("=".equals(opName)) {
+                        String varLocalName = ((InstructionLoadAttr) instructionList[i - 2]).getAttrName();
+                        if(varLocalName != null){
+                            result.remove(varLocalName);
+                        }
                     }
                 }
             }
