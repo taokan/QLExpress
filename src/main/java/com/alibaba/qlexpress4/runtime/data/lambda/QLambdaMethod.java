@@ -1,6 +1,9 @@
 package com.alibaba.qlexpress4.runtime.data.lambda;
 
+import com.alibaba.qlexpress4.QLOptions;
+import com.alibaba.qlexpress4.member.IMethod;
 import com.alibaba.qlexpress4.member.MethodHandler;
+import com.alibaba.qlexpress4.runtime.MetaClass;
 import com.alibaba.qlexpress4.runtime.QLambda;
 import com.alibaba.qlexpress4.runtime.QResult;
 import com.alibaba.qlexpress4.runtime.data.DataValue;
@@ -23,6 +26,12 @@ public class QLambdaMethod implements QLambda {
     private final Object bean;
     private final boolean allowAccessPrivate;
 
+    public QLambdaMethod(List<Method> methods, Object obj) {
+        this.methods = methods;
+        this.bean = obj;
+        this.allowAccessPrivate = true;
+    }
+
     public QLambdaMethod(List<Method> methods, Object obj, boolean allowAccessPrivate) {
         this.methods = methods;
         this.bean = obj;
@@ -30,7 +39,7 @@ public class QLambdaMethod implements QLambda {
     }
 
     @Override
-    public QResult call(Object... params) throws Exception {
+    public QResult call(Object... params) throws Throwable {
         if (methods == null || methods.size() == 0) {
             return new QResult(null, QResult.ResultType.RETURN);
         }
@@ -41,29 +50,21 @@ public class QLambdaMethod implements QLambda {
         if (implicitMethod == null) {
             return new QResult(null, QResult.ResultType.RETURN);
         }
-        if (BasicUtil.isPublic(method)) {
-            QLConvertResult convertResult = ParametersConversion.convert(params, type,
-                    method.getParameterTypes(), implicitMethod.needImplicitTrans(), implicitMethod.getVars());
-            if(convertResult.getResultType().equals(QLConvertResultType.NOT_TRANS)){
-                return new QResult(null, QResult.ResultType.RETURN);
-            }
-            Object value = MethodHandler.Access.accessMethodValue(implicitMethod.getMethod(),bean,
-                    (Object[]) convertResult.getCastValue(),allowAccessPrivate);
-            return new QResult(new DataValue(value), QResult.ResultType.RETURN);
-        } else {
-            if (!allowAccessPrivate) {
-                throw new RuntimeException("QLambdaMethod not accessible");
-            } else {
-                synchronized (method) {
-                    try {
-                        method.setAccessible(true);
-                        Object result = method.invoke(this.bean, params);
-                        return new QResult(new DataValue(result), QResult.ResultType.RETURN);
-                    } finally {
-                        method.setAccessible(false);
-                    }
-                }
-            }
+        QLConvertResult convertResult = ParametersConversion.convert(params, type,
+                method.getParameterTypes(), implicitMethod.needImplicitTrans(), implicitMethod.getVars());
+        if (convertResult.getResultType().equals(QLConvertResultType.NOT_TRANS)) {
+            return new QResult(null, QResult.ResultType.RETURN);
         }
+        Class<?> clazz;
+        if (bean instanceof MetaClass) {
+            clazz = ((MetaClass) bean).getClz();
+        } else {
+            clazz = bean.getClass();
+        }
+
+        IMethod iMethod = MethodHandler.getMethodFromQLOption(QLOptions.DEFAULT_OPTIONS, clazz, implicitMethod.getMethod());
+        Object value = MethodHandler.Access.accessMethodValue(iMethod, bean,
+                (Object[]) convertResult.getCastValue(), allowAccessPrivate);
+        return new QResult(new DataValue(value), QResult.ResultType.RETURN);
     }
 }

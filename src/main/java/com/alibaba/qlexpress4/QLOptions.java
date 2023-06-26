@@ -1,11 +1,10 @@
 package com.alibaba.qlexpress4;
 
+import com.alibaba.qlexpress4.member.MetaProtocol;
+import com.alibaba.qlexpress4.member.QLMetaProtocol;
 import com.alibaba.qlexpress4.parser.ImportManager;
-
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
+import com.alibaba.qlexpress4.security.SafePointStrategy;
+import java.util.*;
 import java.util.function.Consumer;
 
 /**
@@ -78,15 +77,28 @@ public class QLOptions {
     private final boolean avoidNullPointer;
 
     /**
+     * provide some functions in diff devices use
+     */
+    private final MetaProtocol metaProtocol;
+
+    /**
      * consume all debug info, valid when debug is true
      * default is print in standard output, can not be null
      */
     private final Consumer<String> debugInfoConsumer;
 
+    /**
+     * user can choose safePoints about blacklist/whitelist
+     * default is blacklist mode
+     *
+     */
+    private final SafePointStrategy safePointStrategy;
+
+
     private QLOptions(boolean precise, boolean polluteUserContext, ClassLoader classLoader, long timeoutMillis,
                       List<ImportManager.Import> defaultImport, boolean allowAccessPrivateMethod,
                       Map<String, Object> attachments, boolean debug,
-                      boolean avoidNullPointer, Consumer<String> debugInfoConsumer) {
+                      boolean avoidNullPointer, SafePointStrategy safePointStrategy, MetaProtocol metaProtocol, Consumer<String> debugInfoConsumer) {
         this.precise = precise;
         this.polluteUserContext = polluteUserContext;
         this.classLoader = classLoader;
@@ -97,6 +109,8 @@ public class QLOptions {
         this.debug = debug;
         this.avoidNullPointer = avoidNullPointer;
         this.debugInfoConsumer = debugInfoConsumer;
+        this.safePointStrategy = safePointStrategy;
+        this.metaProtocol = metaProtocol;
     }
 
     public static Builder builder() {
@@ -139,6 +153,10 @@ public class QLOptions {
         return avoidNullPointer;
     }
 
+    public SafePointStrategy getSafePointStrategy() {return safePointStrategy;}
+
+    public MetaProtocol getMetaProtocol() {return metaProtocol;}
+
     public Consumer<String> getDebugInfoConsumer() {
         return debugInfoConsumer;
     }
@@ -160,6 +178,10 @@ public class QLOptions {
         private boolean debug = false;
 
         private boolean avoidNullPointer = false;
+
+        private SafePointStrategy safePointStrategy = SafePointStrategy.builder().defaultSystemStrategy();
+
+        private MetaProtocol metaProtocol = new QLMetaProtocol();
 
         private Consumer<String> debugInfoConsumer = System.out::println;
 
@@ -206,6 +228,11 @@ public class QLOptions {
             return this;
         }
 
+        public Builder safePointStrategy(SafePointStrategy safePointStrategy){
+            this.safePointStrategy = safePointStrategy;
+            return this;
+        }
+
         public Builder debug(boolean debug) {
             this.debug = debug;
             return this;
@@ -216,6 +243,11 @@ public class QLOptions {
             return this;
         }
 
+        public Builder metaProtocol(MetaProtocol metaProtocol){
+            this.metaProtocol = metaProtocol;
+            return this;
+        }
+
         public Builder debugInfoConsumer(Consumer<String> debugInfoConsumer) {
             this.debugInfoConsumer = debugInfoConsumer;
             return this;
@@ -223,7 +255,8 @@ public class QLOptions {
 
         public QLOptions build() {
             return new QLOptions(precise, polluteUserContext, classLoader, timeoutMillis,
-                    defaultImport, allowAccessPrivateMethod, attachments, debug, avoidNullPointer, debugInfoConsumer);
+                    defaultImport, allowAccessPrivateMethod, attachments, debug, avoidNullPointer,
+                    safePointStrategy, metaProtocol, debugInfoConsumer);
         }
     }
 
