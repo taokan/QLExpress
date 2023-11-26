@@ -590,7 +590,7 @@ public class QvmInstructionVisitor extends QLGrammarBaseVisitor<Void> {
         if (expression != null) {
             subVisitor = parseExprBodyWithSubVisitor(expression, new GeneratorScope(lambdaScopeName, generatorScope), Context.BLOCK);
         } else {
-            BlockStatementsContext blockStatementsContext = ctx.blockStatements();
+            BlockStatementsContext blockStatementsContext = null;
             if (blockStatementsContext != null) {
                 subVisitor = parseWithSubVisitor(blockStatementsContext, new GeneratorScope(lambdaScopeName, generatorScope), Context.BLOCK);
             }
@@ -887,17 +887,17 @@ public class QvmInstructionVisitor extends QLGrammarBaseVisitor<Void> {
         return null;
     }
 
-    @Override
-    public Void visitCustomPath(CustomPathContext ctx) {
-        ErrorReporter errorReporter = newReporterWithToken(ctx.getStart());
-        String path = ctx.varId().getText();
-        addInstruction(new ConstInstruction(errorReporter, path));
-
-        String operatorId = ctx.opId().getText();
-        BinaryOperator binaryOperator = operatorFactory.getBinaryOperator(operatorId);
-        addInstruction(new OperatorInstruction(errorReporter, binaryOperator));
-        return null;
-    }
+//    @Override
+//    public Void visitCustomPath(CustomPathContext ctx) {
+//        ErrorReporter errorReporter = newReporterWithToken(ctx.getStart());
+//        String path = ctx.varId().getText();
+//        addInstruction(new ConstInstruction(errorReporter, path));
+//
+//        String operatorId = ctx.opId().getText();
+//        BinaryOperator binaryOperator = operatorFactory.getBinaryOperator(operatorId);
+//        addInstruction(new OperatorInstruction(errorReporter, binaryOperator));
+//        return null;
+//    }
 
     @Override
     public Void visitLeftAsso(LeftAssoContext ctx) {
@@ -1371,7 +1371,7 @@ public class QvmInstructionVisitor extends QLGrammarBaseVisitor<Void> {
 
     private Class<?> parseDeclType(DeclTypeContext declTypeContext) {
         Class<?> baseCls = parseDeclBaseCls(declTypeContext);
-        DimsContext dims = declTypeContext.dims();
+        DimsContext dims = null;
         int layers = dims == null ? 0 : dims.LBRACK().size();
         return wrapInArray(baseCls, layers);
     }
@@ -1381,7 +1381,7 @@ public class QvmInstructionVisitor extends QLGrammarBaseVisitor<Void> {
         if (primitiveTypeContext != null) {
             return BuiltInTypesSet.getCls(primitiveTypeContext.getText());
         }
-        ClsTypeContext clsTypeContext = declTypeContext.clsType();
+        ClsTypeContext clsTypeContext = null;
         return parseClsIds(clsTypeContext.varId());
     }
 
