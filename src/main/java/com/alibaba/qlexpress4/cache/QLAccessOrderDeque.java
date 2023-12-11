@@ -4,15 +4,15 @@ package com.alibaba.qlexpress4.cache;
  * @Author TaoKan
  * @Date 2023/11/12 7:08 PM
  */
-public class QLAccessOrderDeque <E extends QLAccessOrderDeque.AccessOrder<E>> extends QLAbstractLinkedDeque<E> {
+public class QLAccessOrderDeque <E extends QLAccessOrderDeque.QLAccessOrder<E>> extends QLAbstractLinkedDeque<E> {
 
     @Override
     public boolean contains(Object o) {
-        return (o instanceof QLAccessOrderDeque.AccessOrder<?>) && contains((QLAccessOrderDeque.AccessOrder<?>) o);
+        return (o instanceof QLAccessOrderDeque.QLAccessOrder<?>) && contains((QLAccessOrderDeque.QLAccessOrder<?>) o);
     }
 
     // A fast-path containment check
-    boolean contains(QLAccessOrderDeque.AccessOrder<?> e) {
+    boolean contains(QLAccessOrderDeque.QLAccessOrder<?> e) {
         return (e.getPreviousInAccessOrder() != null)
                 || (e.getNextInAccessOrder() != null)
                 || (e == first);
@@ -21,7 +21,7 @@ public class QLAccessOrderDeque <E extends QLAccessOrderDeque.AccessOrder<E>> ex
     @Override
     @SuppressWarnings("unchecked")
     public boolean remove(Object o) {
-        return (o instanceof QLAccessOrderDeque.AccessOrder<?>) && remove((E) o);
+        return (o instanceof QLAccessOrderDeque.QLAccessOrder<?>) && remove((E) o);
     }
 
     // A fast-path removal
@@ -54,7 +54,7 @@ public class QLAccessOrderDeque <E extends QLAccessOrderDeque.AccessOrder<E>> ex
     }
 
 
-    interface AccessOrder<T extends QLAccessOrderDeque.AccessOrder<T>> {
+    interface QLAccessOrder<T extends QLAccessOrderDeque.QLAccessOrder<T>> {
 
         /**
          * Retrieves the previous element or <tt>null</tt> if either the element is unlinked or the
