@@ -54,6 +54,8 @@ public class QLCacheMap<K,V> implements ICache<K,V> {
     private QLAccessOrderDeque accessOrderWindowDeque;
     private QLAccessOrderDeque accessOrderProbationDeque;
     private QLAccessOrderDeque accessOrderProtectedDeque;
+    private MpscGrowableArrayQueue writeBuffer;
+
     long maximum;
     long weightedSize;
     long windowMaximum;
@@ -98,11 +100,11 @@ public class QLCacheMap<K,V> implements ICache<K,V> {
                 if ((long)i == remainder) {
                     --maxSegmentWeight;
                 }
-                this.segments[i] = this.createSegment(segmentSize, maxSegmentWeight, this.qlFrequency);
+                this.segments[i] = this.createSegment(segmentSize, maxSegmentWeight);
             }
         } else {
             for(int i = 0; i < this.segments.length; ++i) {
-                this.segments[i] = this.createSegment(segmentSize, -1L, this.qlFrequency);
+                this.segments[i] = this.createSegment(segmentSize, -1L);
             }
         }
         setMaximumSize(maxWeight);
@@ -112,7 +114,9 @@ public class QLCacheMap<K,V> implements ICache<K,V> {
         this.accessOrderWindowDeque = new QLAccessOrderDeque();
         this.accessOrderProbationDeque = new QLAccessOrderDeque();
         this.accessOrderProtectedDeque = new QLAccessOrderDeque();
+        writeBuffer = new MpscGrowableArrayQueue<>(WRITE_BUFFER_MIN, WRITE_BUFFER_MAX);
     }
+
 
     protected final void setMaximum(long maximum) {
         this.maximum = maximum;
@@ -217,8 +221,8 @@ public class QLCacheMap<K,V> implements ICache<K,V> {
         return new QLSegment[size];
     }
 
-    QLSegment<K, V> createSegment(int initialCapacity, long maxSegmentWeight, QLFrequency qlFrequency) {
-        return new QLSegment(this, initialCapacity, maxSegmentWeight, qlFrequency);
+    QLSegment<K, V> createSegment(int initialCapacity, long maxSegmentWeight) {
+        return new QLSegment(this, initialCapacity, maxSegmentWeight);
     }
 
     static int rehash(int h) {
@@ -240,5 +244,10 @@ public class QLCacheMap<K,V> implements ICache<K,V> {
         // From Hacker's Delight, Chapter 3, Harry S. Warren Jr.
         return 1L << -Long.numberOfLeadingZeros(x - 1);
     }
+
+    public MpscGrowableArrayQueue getWriteBuffer() {
+        return writeBuffer;
+    }
+
 
 }
