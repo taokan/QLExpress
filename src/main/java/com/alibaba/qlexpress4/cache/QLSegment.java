@@ -18,6 +18,7 @@ public class QLSegment<K,V> {
     private QLCacheWindow window;
     private QLCacheMainProtected mainProtected;
     private QLCacheStatistic statistic;
+
     private long weight;
 
     public QLSegment(QLCacheMap<K,V> cacheV, int initialCapacity, long maxSegmentWeight){
@@ -56,6 +57,7 @@ public class QLSegment<K,V> {
         this.cacheV.getWriteBuffer().offer(new QLCacheAddTask(cacheNode, 1, this, this.cacheV.frequencySketch()));
     }
     private void onAccessUpdateWriteTask(QLCacheNode<K,V> cacheNodeNew, QLCacheNode<K,V> cacheNodeOld) {
+        this.cacheV.getWriteBuffer().offer(new QLCacheUpdateTask(cacheNodeNew, cacheNodeOld , 1, this, this.cacheV.frequencySketch()));
     }
 
     private void onAccessDeleteWriteTask(QLCacheNode<K,V> cacheNode){
@@ -131,7 +133,7 @@ public class QLSegment<K,V> {
     @GuardedBy("evictionLock")
     @Nullable QLCacheNode<K, V> evictFromWindow() {
         QLCacheNode<K, V> first = null;
-        QLCacheNode<K, V> node = accessOrderWindowDeque().peekFirst();
+        QLCacheNode<K, V> node = this.getCacheV().accessOrderWindowDeque().peekFirst();
         while (this.window.getWeight() > this.window.getMaxNum()) {
             // The pending operations will adjust the size to reflect the correct weight
             if (node == null) {
@@ -141,8 +143,8 @@ public class QLSegment<K,V> {
             QLCacheNode<K, V> next = node.getNextInAccessOrder();
             if (node.getWeight() != 0) {
                 node.makeMainProbation();
-                accessOrderWindowDeque().remove(node);
-                accessOrderProbationDeque().offerLast(node);
+                this.getCacheV().accessOrderWindowDeque().remove(node);
+                this.getCacheV().accessOrderProbationDeque().offerLast(node);
                 if (first == null) {
                     first = node;
                 }
@@ -158,22 +160,22 @@ public class QLSegment<K,V> {
     void evictFromMain(@Nullable QLCacheNode<K, V> candidate) {
         int victimQueue = PROBATION;
         int candidateQueue = PROBATION;
-        QLCacheNode<K, V> victim = accessOrderProbationDeque().peekFirst();
+        QLCacheNode<K, V> victim = this.getCacheV().accessOrderProbationDeque().peekFirst();
         while (this.weight > this.maxSegmentWeight) {
             // Search the admission window for additional candidates
             if ((candidate == null) && (candidateQueue == PROBATION)) {
-                candidate = accessOrderWindowDeque().peekFirst();
+                candidate = this.getCacheV().accessOrderWindowDeque().peekFirst();
                 candidateQueue = WINDOW;
             }
 
             // Try evicting from the protected and window queues
             if ((candidate == null) && (victim == null)) {
                 if (victimQueue == PROBATION) {
-                    victim = accessOrderProtectedDeque().peekFirst();
+                    victim = this.getCacheV().accessOrderProtectedDeque().peekFirst();
                     victimQueue = PROTECTED;
                     continue;
                 } else if (victimQueue == PROTECTED) {
-                    victim = accessOrderWindowDeque().peekFirst();
+                    victim = this.getCacheV().accessOrderWindowDeque().peekFirst();
                     victimQueue = WINDOW;
                     continue;
                 }
@@ -237,7 +239,7 @@ public class QLSegment<K,V> {
             }
 
             // Evict the entry with the lowest frequency
-            if (admit(candidateKey, victimKey)) {
+            if (this.getCacheV().admit(candidateKey, victimKey)) {
                 QLCacheNode<K, V> evict = victim;
                 victim = victim.getNextInAccessOrder();
                 evictEntry(evict, RemovalCause.SIZE, 0L);
@@ -278,13 +280,13 @@ public class QLSegment<K,V> {
 
                 if (actualCause[0] == RemovalCause.EXPIRED) {
                     boolean expired = false;
-                    if (expiresAfterAccess()) {
+                    if (this.getCacheV().expiresAfterAccess()) {
                         expired |= ((now - n.getAccessTime()) >= expiresAfterAccessNanos());
                     }
-                    if (expiresAfterWrite()) {
+                    if (this.getCacheV().expiresAfterWrite()) {
                         expired |= ((now - n.getWriteTime()) >= expiresAfterWriteNanos());
                     }
-                    if (expiresVariable()) {
+                    if (this.getCacheV().expiresVariable()) {
                         expired |= (n.getVariableTime() <= now);
                     }
                     if (!expired) {
@@ -317,18 +319,18 @@ public class QLSegment<K,V> {
         // decremented before the removal task so that if an eviction is still required then a new
         // victim will be chosen for removal.
         if (node.inWindow() && (evicts() || expiresAfterAccess())) {
-            accessOrderWindowDeque().remove(node);
+            this.getCacheV().accessOrderWindowDeque().remove(node);
         } else if (evicts()) {
             if (node.inMainProbation()) {
-                accessOrderProbationDeque().remove(node);
+                this.getCacheV().accessOrderProbationDeque().remove(node);
             } else {
-                accessOrderProtectedDeque().remove(node);
+                this.getCacheV().accessOrderProtectedDeque().remove(node);
             }
         }
         if (expiresAfterWrite()) {
-            writeOrderDeque().remove(node);
+            this.getCacheV().writeOrderDeque().remove(node);
         } else if (expiresVariable()) {
-            timerWheel().deschedule(node);
+            this.getCacheV().timerWheel().deschedule(node);
         }
 
         synchronized (node) {
@@ -342,6 +344,29 @@ public class QLSegment<K,V> {
         }
 
         return true;
+    }
+
+    public void expireVariableEntries(long now) {
+        if (this.getCacheV().expiresVariable()) {
+            this.getCacheV().timerWheel().advance(this, now);
+        }
+    }
+
+    void expireEntries() {
+        long now = this.getCacheV().expirationTicker().read();
+        expireAfterAccessEntries(now);
+        expireAfterWriteEntries(now);
+        expireVariableEntries(now);
+
+        Pacer pacer = pacer();
+        if (pacer != null) {
+            long delay = getExpirationDelay(now);
+            if (delay == Long.MAX_VALUE) {
+                pacer.cancel();
+            } else {
+                pacer.schedule(executor, drainBuffersTask, now, delay);
+            }
+        }
     }
 
 }

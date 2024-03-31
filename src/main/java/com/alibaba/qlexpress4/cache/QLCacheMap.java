@@ -1,5 +1,8 @@
 package com.alibaba.qlexpress4.cache;
 
+import com.google.errorprone.annotations.concurrent.GuardedBy;
+
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
 
@@ -54,6 +57,8 @@ public class QLCacheMap<K,V> implements ICache<K,V> {
     private QLAccessOrderDeque accessOrderWindowDeque;
     private QLAccessOrderDeque accessOrderProbationDeque;
     private QLAccessOrderDeque accessOrderProtectedDeque;
+    private QLTicker qlTicker;
+    private TimerWheel timerWheel;
     private MpscGrowableArrayQueue writeBuffer;
 
     long maximum;
@@ -114,6 +119,12 @@ public class QLCacheMap<K,V> implements ICache<K,V> {
         this.accessOrderWindowDeque = new QLAccessOrderDeque();
         this.accessOrderProbationDeque = new QLAccessOrderDeque();
         this.accessOrderProtectedDeque = new QLAccessOrderDeque();
+        this.timerWheel = new TimerWheel();
+        boolean useTicker = expiresVariable() || expiresAfterAccess()
+                || expiresAfterWrite() || refreshAfterWrite() || isRecordingStats();
+        this.qlTicker = useTicker
+                ? (qlTicker == null) ? QLTicker.systemTicker() : qlTicker
+                : QLTicker.disabledTicker();
         writeBuffer = new MpscGrowableArrayQueue<>(WRITE_BUFFER_MIN, WRITE_BUFFER_MAX);
     }
 
@@ -249,5 +260,53 @@ public class QLCacheMap<K,V> implements ICache<K,V> {
         return writeBuffer;
     }
 
+    public QLTicker getQlTicker() {
+        return qlTicker;
+    }
 
+    public void setQlTicker(QLTicker qlTicker) {
+        this.qlTicker = qlTicker;
+    }
+
+    public QLTicker expirationTicker() {
+        return QLTicker.disabledTicker();
+    }
+
+
+    public boolean expiresAfterWrite(){
+        return false;
+    }
+
+    public boolean expiresVariable(){
+        return timerWheel() != null;
+    }
+
+    public TimerWheel<K,V> timerWheel(){
+        return getTimerWheel();
+    }
+
+
+    public TimerWheel getTimerWheel() {
+        return timerWheel;
+    }
+
+    public void setTimerWheel(TimerWheel timerWheel) {
+        this.timerWheel = timerWheel;
+    }
+
+    @GuardedBy("evictionLock")
+    public boolean admit(K candidateKey, K victimKey) {
+        int victimFreq = frequencySketch().frequency(victimKey);
+        int candidateFreq = frequencySketch().frequency(candidateKey);
+        if (candidateFreq > victimFreq) {
+            return true;
+        } else if (candidateFreq >= ADMIT_HASHDOS_THRESHOLD) {
+            // The maximum frequency is 15 and halved to 7 after a reset to age the history. An attack
+            // exploits that a hot candidate is rejected in favor of a hot victim. The threshold of a warm
+            // candidate reduces the number of random acceptances to minimize the impact on the hit rate.
+            int random = ThreadLocalRandom.current().nextInt();
+            return ((random & 127) == 0);
+        }
+        return false;
+    }
 }

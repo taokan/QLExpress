@@ -44,18 +44,19 @@ public class QLCacheAddTask<K,V> implements Runnable {
         }
         this.segment.getStatistic().setMissesInSample(this.segment.getStatistic().getMissesInSample() + 1);
         // ignore out-of-order write operations
-        if (expiresAfterWrite()) {
-            writeOrderDeque().offerLast(node);
-        }
-        if (expiresVariable()) {
-            timerWheel().schedule(node);
+//        if (expiresAfterWrite()) {
+//            writeOrderDeque().offerLast(node);
+//        }
+        if (this.segment.getCacheV().expiresVariable()) {
+            this.segment.getCacheV().timerWheel().schedule(node);
         }
         if (weight > maximum) {
-            evictEntry(node, RemovalCause.SIZE, expirationTicker().read());
+            this.segment.evictEntry(node, RemovalCause.SIZE, this.segment.getCacheV().expirationTicker().read());
         } else if (weight > this.segment.getWindow().getMaxNum()) {
-            accessOrderWindowDeque().offerFirst(node);
+            this.segment.getCacheV().accessOrderWindowDeque().offerFirst(node);
         } else {
-            accessOrderWindowDeque().offerLast(node);
+            this.segment.getCacheV().accessOrderWindowDeque().offerLast(node);
         }
     }
+
 }
