@@ -12,38 +12,10 @@ import java.util.NoSuchElementException;
  */
 public abstract class QLAbstractLinkedDeque<E> extends AbstractCollection<E> implements QLLinkedDeque<E> {
 
-    // This class provides a doubly-linked list that is optimized for the virtual machine. The first
-    // and last elements are manipulated instead of a slightly more convenient sentinel element to
-    // avoid the insertion of null checks with NullPointerException throws in the byte code. The links
-    // to a removed element are cleared to help a generational garbage collector if the discarded
-    // elements inhabit more than one generation.
-
-    /**
-     * Pointer to first node.
-     * Invariant: (first == null && last == null) ||
-     *            (first.prev == null)
-     */
     E first;
-
-    /**
-     * Pointer to last node.
-     * Invariant: (first == null && last == null) ||
-     *            (last.next == null)
-     */
     E last;
-
-    /**
-     * The number of times this deque has been <i>structurally modified</i>. Structural modifications
-     * are those that change the size of the deque, or otherwise perturb it in such a fashion that
-     * iterations in progress may yield incorrect results.
-     */
     int modCount;
 
-    /**
-     * Links the element to the front of the deque so that it becomes the first element.
-     *
-     * @param e the unlinked element
-     */
     void linkFirst(final E e) {
         final E f = first;
         first = e;

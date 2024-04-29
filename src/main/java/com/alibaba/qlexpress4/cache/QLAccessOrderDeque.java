@@ -56,22 +56,13 @@ public class QLAccessOrderDeque <E extends QLAccessOrderDeque.QLAccessOrder<E>> 
 
     interface QLAccessOrder<T extends QLAccessOrderDeque.QLAccessOrder<T>> {
 
-        /**
-         * Retrieves the previous element or <tt>null</tt> if either the element is unlinked or the
-         * first element on the deque.
-         */
         T getPreviousInAccessOrder();
 
-        /** Sets the previous element or <tt>null</tt> if there is no link. */
         void setPreviousInAccessOrder(T prev);
 
-        /**
-         * Retrieves the next element or <tt>null</tt> if either the element is unlinked or the last
-         * element on the deque.
-         */
+
         T getNextInAccessOrder();
 
-        /** Sets the next element or <tt>null</tt> if there is no link. */
         void setNextInAccessOrder(T next);
     }
 }

@@ -1,5 +1,6 @@
 package com.alibaba.qlexpress4.cache;
 
+import org.checkerframework.checker.index.qual.NonNegative;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import java.util.Date;
 
@@ -95,22 +96,12 @@ public class QLCacheNode<K,V> implements QLAccessOrderDeque.QLAccessOrder<QLCach
 
     }
 
-
-    /** Returns the variable expiration time, in nanoseconds. */
     public long getVariableTime() {
         return 0L;
     }
 
-    /**
-     * Sets the variable expiration time in nanoseconds. This update may be set lazily and rely on the
-     * memory fence when the lock is released.
-     */
     public void setVariableTime(long time) {}
 
-    /**
-     * Atomically sets the variable time to the given updated value if the current value equals the
-     * expected value and returns if the update was successful.
-     */
     public boolean casVariableTime(long expect, long update) {
         throw new UnsupportedOperationException();
     }
@@ -156,28 +147,47 @@ public class QLCacheNode<K,V> implements QLAccessOrderDeque.QLAccessOrder<QLCach
         return getQueueType() == PROTECTED;
     }
 
-    /** Sets the status to the Window queue. */
     public void makeWindow() {
         setQueueType(WINDOW);
     }
 
-    /** Sets the status to the Main space's probation queue. */
     public void makeMainProbation() {
         setQueueType(PROBATION);
     }
 
-    /** Sets the status to the Main space's protected queue. */
     public void makeMainProtected() {
         setQueueType(PROTECTED);
     }
 
-    /** Returns the queue that the entry's resides in (window, probation, or protected). */
     public int getQueueType() {
         return WINDOW;
     }
 
-    /** Set queue that the entry resides in (window, probation, or protected). */
     public void setQueueType(int queueType) {
         throw new UnsupportedOperationException();
     }
+
+    public int getPolicyWeight() {
+        return 1;
+    }
+
+    public void setPolicyWeight(int weight) {}
+
+    public boolean inWindow() {
+        return getQueueType() == WINDOW;
+    }
+
+    public boolean inMainProbation() {
+        return getQueueType() == PROBATION;
+    }
+
+    public long getAccessTime() {
+        return 0L;
+    }
+
+    public long getWriteTime() {
+        return 0L;
+    }
+
+
 }

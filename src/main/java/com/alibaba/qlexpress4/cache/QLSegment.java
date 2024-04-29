@@ -1,7 +1,5 @@
 package com.alibaba.qlexpress4.cache;
 
-import com.google.errorprone.annotations.concurrent.GuardedBy;
-import org.checkerframework.checker.nullness.qual.Nullable;
 import java.util.concurrent.ConcurrentHashMap;
 
 import static com.alibaba.qlexpress4.cache.QLCacheNode.*;
@@ -57,7 +55,8 @@ public class QLSegment<K,V> {
         this.cacheV.getWriteBuffer().offer(new QLCacheAddTask(cacheNode, 1, this, this.cacheV.frequencySketch()));
     }
     private void onAccessUpdateWriteTask(QLCacheNode<K,V> cacheNodeNew, QLCacheNode<K,V> cacheNodeOld) {
-        this.cacheV.getWriteBuffer().offer(new QLCacheUpdateTask(cacheNodeNew, cacheNodeOld , 1, this, this.cacheV.frequencySketch()));
+        //TODO weightDiff
+        this.cacheV.getWriteBuffer().offer(new QLCacheUpdateTask(cacheNodeNew, cacheNodeOld , 1, this, this.cacheV.frequencySketch(),0));
     }
 
     private void onAccessDeleteWriteTask(QLCacheNode<K,V> cacheNode){
@@ -130,8 +129,7 @@ public class QLSegment<K,V> {
         evictFromMain(evictFromWindow());
     }
 
-    @GuardedBy("evictionLock")
-    @Nullable QLCacheNode<K, V> evictFromWindow() {
+    QLCacheNode<K, V> evictFromWindow() {
         QLCacheNode<K, V> first = null;
         QLCacheNode<K, V> node = this.getCacheV().accessOrderWindowDeque().peekFirst();
         while (this.window.getWeight() > this.window.getMaxNum()) {
@@ -156,8 +154,7 @@ public class QLSegment<K,V> {
         return first;
     }
 
-    @GuardedBy("evictionLock")
-    void evictFromMain(@Nullable QLCacheNode<K, V> candidate) {
+    void evictFromMain(QLCacheNode<K, V> candidate) {
         int victimQueue = PROBATION;
         int candidateQueue = PROBATION;
         QLCacheNode<K, V> victim = this.getCacheV().accessOrderProbationDeque().peekFirst();
@@ -252,8 +249,6 @@ public class QLSegment<K,V> {
         }
     }
 
-    @GuardedBy("evictionLock")
-    @SuppressWarnings({"GuardedByChecker", "NullAway", "PMD.CollapsibleIfStatements"})
     boolean evictEntry(QLCacheNode<K, V> node, RemovalCause cause, long now) {
         K key = node.getKey();
         @SuppressWarnings("unchecked")
@@ -281,10 +276,10 @@ public class QLSegment<K,V> {
                 if (actualCause[0] == RemovalCause.EXPIRED) {
                     boolean expired = false;
                     if (this.getCacheV().expiresAfterAccess()) {
-                        expired |= ((now - n.getAccessTime()) >= expiresAfterAccessNanos());
+                        expired |= ((now - n.getAccessTime()) >= this.getCacheV().expiresAfterAccessNanos());
                     }
                     if (this.getCacheV().expiresAfterWrite()) {
-                        expired |= ((now - n.getWriteTime()) >= expiresAfterWriteNanos());
+                        expired |= ((now - n.getWriteTime()) >= this.getCacheV().expiresAfterWriteNanos());
                     }
                     if (this.getCacheV().expiresVariable()) {
                         expired |= (n.getVariableTime() <= now);
@@ -300,25 +295,16 @@ public class QLSegment<K,V> {
                         return n;
                     }
                 }
-
-                notifyEviction(key, value[0], actualCause[0]);
-                discardRefresh(key);
                 removed[0] = true;
-                node.retire();
             }
             return null;
         });
 
-        // The entry is no longer eligible for eviction
         if (resurrect[0]) {
             return false;
         }
 
-        // If the eviction fails due to a concurrent removal of the victim, that removal may cancel out
-        // the addition that triggered this eviction. The victim is eagerly unlinked and the size
-        // decremented before the removal task so that if an eviction is still required then a new
-        // victim will be chosen for removal.
-        if (node.inWindow() && (evicts() || expiresAfterAccess())) {
+        if (node.inWindow() && (evicts() || this.getCacheV().expiresAfterAccess())) {
             this.getCacheV().accessOrderWindowDeque().remove(node);
         } else if (evicts()) {
             if (node.inMainProbation()) {
@@ -327,28 +313,33 @@ public class QLSegment<K,V> {
                 this.getCacheV().accessOrderProtectedDeque().remove(node);
             }
         }
-        if (expiresAfterWrite()) {
+        if (this.getCacheV().expiresAfterWrite()) {
             this.getCacheV().writeOrderDeque().remove(node);
-        } else if (expiresVariable()) {
+        } else if (this.getCacheV().expiresVariable()) {
             this.getCacheV().timerWheel().deschedule(node);
         }
 
         synchronized (node) {
-            logIfAlive(node);
             makeDead(node);
         }
 
         if (removed[0]) {
-            statsCounter().recordEviction(node.getWeight(), actualCause[0]);
-            notifyRemoval(key, value[0], actualCause[0]);
+            this.getCacheV().statsCounter().recordEviction(node.getWeight(), actualCause[0]);
         }
 
         return true;
     }
 
-    public void expireVariableEntries(long now) {
-        if (this.getCacheV().expiresVariable()) {
-            this.getCacheV().timerWheel().advance(this, now);
+    void makeDead(QLCacheNode<K, V> node) {
+        synchronized (node) {
+            if (evicts()) {
+                if (node.inWindow()) {
+                    this.getCacheV().setWindowWeightedSize( this.getCacheV().windowWeightedSize() - node.getWeight());
+                } else if (node.inMainProtected()) {
+                    this.getCacheV().setMainProtectedWeightedSize( this.getCacheV().mainProtectedWeightedSize() - node.getWeight());
+                }
+                this.getCacheV().setWeightedSize(this.getCacheV().weightedSize() - node.getWeight());
+            }
         }
     }
 
@@ -358,14 +349,108 @@ public class QLSegment<K,V> {
         expireAfterWriteEntries(now);
         expireVariableEntries(now);
 
-        Pacer pacer = pacer();
-        if (pacer != null) {
-            long delay = getExpirationDelay(now);
-            if (delay == Long.MAX_VALUE) {
-                pacer.cancel();
-            } else {
-                pacer.schedule(executor, drainBuffersTask, now, delay);
+        //不用pacer，暂时没有功能
+//        QLPacer pacer = pacer();
+//        if (pacer != null) {
+//            long delay = getExpirationDelay(now);
+//            if (delay == Long.MAX_VALUE) {
+//                pacer.cancel();
+//            } else {
+//                pacer.schedule(executor, drainBuffersTask, now, delay);
+//            }
+//        }
+    }
+
+    void expireAfterAccessEntries(long now) {
+        if (!this.getCacheV().expiresAfterAccess()) {
+            return;
+        }
+        expireAfterAccessEntries(this.getCacheV().accessOrderWindowDeque(), now);
+        if (evicts()) {
+            expireAfterAccessEntries(this.getCacheV().accessOrderProbationDeque(), now);
+            expireAfterAccessEntries(this.getCacheV().accessOrderProtectedDeque(), now);
+        }
+    }
+
+    /** Expires entries in an access-order queue. */
+    void expireAfterAccessEntries(QLAccessOrderDeque<QLCacheNode<K, V>> accessOrderDeque, long now) {
+        long duration = this.getCacheV().expiresAfterAccessNanos();
+        for (;;) {
+            QLCacheNode<K, V> node = accessOrderDeque.peekFirst();
+            if ((node == null) || ((now - node.getAccessTime()) < duration)
+                    || !evictEntry(node, RemovalCause.EXPIRED, now)) {
+                return;
             }
+        }
+    }
+
+    /** Expires entries on the write-order queue. */
+    void expireAfterWriteEntries(long now) {
+        if (!this.getCacheV().expiresAfterWrite()) {
+            return;
+        }
+        long duration = this.getCacheV().expiresAfterWriteNanos();
+        for (;;) {
+            QLCacheNode<K, V> node = this.getCacheV().writeOrderDeque().peekFirst();
+            if ((node == null) || ((now - node.getWriteTime()) < duration)
+                    || !evictEntry(node, RemovalCause.EXPIRED, now)) {
+                break;
+            }
+        }
+    }
+
+    /** Expires entries in the timer wheel. */
+    void expireVariableEntries(long now) {
+        if (this.getCacheV().expiresVariable()) {
+            this.getCacheV().timerWheel().advance(this, now);
+        }
+    }
+
+
+    public boolean evicts() {
+        return false;
+    }
+
+    void onAccess(QLCacheNode<K, V> node) {
+        if (evicts()) {
+            K key = node.getKey();
+            if (key == null) {
+                return;
+            }
+            this.getCacheV().frequencySketch().increment(key);
+            if (node.inWindow()) {
+                reorder(this.getCacheV().accessOrderWindowDeque(), node);
+            } else if (node.inMainProbation()) {
+                reorderProbation(node);
+            } else {
+                reorder(this.getCacheV().accessOrderProtectedDeque(), node);
+            }
+            this.getCacheV().setHitsInSample(this.getCacheV().hitsInSample() + 1);
+        } else if (this.getCacheV().expiresAfterAccess()) {
+            reorder(this.getCacheV().accessOrderWindowDeque(), node);
+        }
+        if (this.getCacheV().expiresVariable()) {
+            this.getCacheV().timerWheel().reschedule(node);
+        }
+    }
+
+    void reorderProbation(QLCacheNode<K, V> node) {
+        if (!this.getCacheV().accessOrderProbationDeque().contains(node)) {
+            return;
+        } else if (node.getPolicyWeight() > this.getCacheV().mainProtectedMaximum()) {
+            reorder(this.getCacheV().accessOrderProbationDeque(), node);
+            return;
+        }
+
+        this.getCacheV().setMainProtectedWeightedSize(this.getCacheV().mainProtectedWeightedSize() + node.getPolicyWeight());
+        this.getCacheV().accessOrderProbationDeque().remove(node);
+        this.getCacheV().accessOrderProtectedDeque().offerLast(node);
+        node.makeMainProtected();
+    }
+
+    static <K, V> void reorder(QLLinkedDeque<QLCacheNode<K, V>> deque, QLCacheNode<K, V> node) {
+        if (deque.contains(node)) {
+            deque.moveToBack(node);
         }
     }
 

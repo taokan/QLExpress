@@ -1,6 +1,5 @@
 package com.alibaba.qlexpress4.cache;
 
-import com.google.errorprone.annotations.concurrent.GuardedBy;
 import static com.alibaba.qlexpress4.cache.QLCacheMap.MAXIMUM_CAPACITY;
 
 
@@ -24,7 +23,6 @@ public class QLCacheAddTask<K,V> implements Runnable {
     }
 
     @Override
-    @GuardedBy("evictionLock")
     @SuppressWarnings("FutureReturnValueIgnored")
     public void run() {
         this.segment.setWeight(this.segment.getWeight() + this.weight);

@@ -13,19 +13,6 @@ import static com.alibaba.qlexpress4.cache.QLCacheMap.ceilingPowerOfTwo;
  * @Date 2024/3/25 2:16 PM
  */
 public final class TimerWheel<K, V> implements Iterable<QLCacheNode<K, V>> {
-
-    /*
-     * A timer wheel [1] stores timer events in buckets on a circular buffer. A bucket represents a
-     * coarse time span, e.g. one minute, and holds a doubly-linked list of events. The wheels are
-     * structured in a hierarchy (seconds, minutes, hours, days) so that events scheduled in the
-     * distant future are cascaded to lower buckets when the wheels rotate. This allows for events
-     * to be added, removed, and expired in O(1) time, where expiration occurs for the entire bucket,
-     * and the penalty of cascading is amortized by the rotations.
-     *
-     * [1] Hashed and Hierarchical Timing Wheels
-     * http://www.cs.columbia.edu/~nahum/w6998/papers/ton97-timing-wheels.pdf
-     */
-
     static final int[] BUCKETS = { 64, 64, 32, 4, 1 };
     static final long[] SPANS = {
             ceilingPowerOfTwo(TimeUnit.SECONDS.toNanos(1)), // 1.07s
@@ -58,20 +45,9 @@ public final class TimerWheel<K, V> implements Iterable<QLCacheNode<K, V>> {
         }
     }
 
-    /**
-     * Advances the timer and evicts entries that have expired.
-     *
-     * @param cache the instance that the entries belong to
-     * @param currentTimeNanos the current time, in nanoseconds
-     */
-    @SuppressWarnings("PMD.UnusedAssignment")
     public void advance(QLSegment<K, V> cache, long currentTimeNanos) {
         long previousTimeNanos = nanos;
         nanos = currentTimeNanos;
-
-        // If wrapping then temporarily shift the clock for a positive comparison. We assume that the
-        // advancements never exceed a total running time of Long.MAX_VALUE nanoseconds (292 years)
-        // so that an overflow only occurs due to using an arbitrary origin time (System.nanoTime()).
         if ((previousTimeNanos < 0) && (currentTimeNanos > 0)) {
             previousTimeNanos += Long.MAX_VALUE;
             currentTimeNanos += Long.MAX_VALUE;
@@ -93,14 +69,6 @@ public final class TimerWheel<K, V> implements Iterable<QLCacheNode<K, V>> {
         }
     }
 
-    /**
-     * Expires entries or reschedules into the proper bucket if still active.
-     *
-     * @param cache the instance that the entries belong to
-     * @param index the timing wheel being operated on
-     * @param previousTicks the previous number of ticks
-     * @param delta the number of additional ticks
-     */
     void expire(QLSegment<K, V> cache, int index, long previousTicks, long delta) {
         QLCacheNode<K, V>[] timerWheel = wheel[index];
         int mask = timerWheel.length - 1;
@@ -140,21 +108,11 @@ public final class TimerWheel<K, V> implements Iterable<QLCacheNode<K, V>> {
         }
     }
 
-    /**
-     * Schedules a timer event for the node.
-     *
-     * @param node the entry in the cache
-     */
     public void schedule(QLCacheNode<K, V> node) {
         QLCacheNode<K, V> sentinel = findBucket(node.getVariableTime());
         link(sentinel, node);
     }
 
-    /**
-     * Reschedules an active timer event for the node.
-     *
-     * @param node the entry in the cache
-     */
     public void reschedule(QLCacheNode<K, V> node) {
         if (node.getNextInVariableOrder() != null) {
             unlink(node);
@@ -162,23 +120,12 @@ public final class TimerWheel<K, V> implements Iterable<QLCacheNode<K, V>> {
         }
     }
 
-    /**
-     * Removes a timer event for this entry if present.
-     *
-     * @param node the entry in the cache
-     */
     public void deschedule(QLCacheNode<K, V> node) {
         unlink(node);
         node.setNextInVariableOrder(null);
         node.setPreviousInVariableOrder(null);
     }
 
-    /**
-     * Determines the bucket that the timer event should be added to.
-     *
-     * @param time the time when the event fires
-     * @return the sentinel at the head of the bucket
-     */
     QLCacheNode<K, V> findBucket(long time) {
         long duration = time - nanos;
         int length = wheel.length - 1;
@@ -192,7 +139,6 @@ public final class TimerWheel<K, V> implements Iterable<QLCacheNode<K, V>> {
         return wheel[length][0];
     }
 
-    /** Adds the entry at the tail of the bucket's list. */
     void link(QLCacheNode<K, V> sentinel, QLCacheNode<K, V> node) {
         node.setPreviousInVariableOrder(sentinel.getPreviousInVariableOrder());
         node.setNextInVariableOrder(sentinel);
@@ -201,7 +147,6 @@ public final class TimerWheel<K, V> implements Iterable<QLCacheNode<K, V>> {
         sentinel.setPreviousInVariableOrder(node);
     }
 
-    /** Removes the entry from its bucket, if scheduled. */
     void unlink(QLCacheNode<K, V> node) {
         QLCacheNode<K, V> next = node.getNextInVariableOrder();
         if (next != null) {
@@ -211,7 +156,6 @@ public final class TimerWheel<K, V> implements Iterable<QLCacheNode<K, V>> {
         }
     }
 
-    /** Returns the duration until the next bucket expires, or {@link Long#MAX_VALUE} if none. */
     @SuppressWarnings("IntLongMath")
     public long getExpirationDelay() {
         for (int i = 0; i < SHIFT.length; i++) {
@@ -243,11 +187,6 @@ public final class TimerWheel<K, V> implements Iterable<QLCacheNode<K, V>> {
         return Long.MAX_VALUE;
     }
 
-    /**
-     * Returns the duration when the wheel's next bucket expires, or {@link Long#MAX_VALUE} if empty.
-     *
-     * @param index the timing wheel being operated on
-     */
     long peekAhead(int index) {
         long ticks = (nanos >>> SHIFT[index]);
         QLCacheNode<K, V>[] timerWheel = wheel[index];
@@ -260,26 +199,15 @@ public final class TimerWheel<K, V> implements Iterable<QLCacheNode<K, V>> {
         return (next == sentinel) ? Long.MAX_VALUE : (SPANS[index] - (nanos & spanMask));
     }
 
-    /**
-     * Returns an iterator roughly ordered by the expiration time from the entries most likely to
-     * expire (oldest) to the entries least likely to expire (youngest). The wheels are evaluated in
-     * order, but the timers that fall within the bucket's range are not sorted.
-     */
     @Override
     public Iterator<QLCacheNode<K, V>> iterator() {
         return new AscendingIterator();
     }
 
-    /**
-     * Returns an iterator roughly ordered by the expiration time from the entries least likely to
-     * expire (youngest) to the entries most likely to expire (oldest). The wheels are evaluated in
-     * order, but the timers that fall within the bucket's range are not sorted.
-     */
     public Iterator<QLCacheNode<K, V>> descendingIterator() {
         return new DescendingIterator();
     }
 
-    /** An iterator with rough ordering that can be specialized for either direction. */
     abstract class Traverser implements Iterator<QLCacheNode<K, V>> {
         final long expectedNanos;
 
@@ -329,19 +257,14 @@ public final class TimerWheel<K, V> implements Iterable<QLCacheNode<K, V>> {
             }
         }
 
-        /** Returns if the iteration has completed. */
         abstract boolean isDone();
 
-        /** Returns the sentinel at the current wheel and bucket position. */
         abstract QLCacheNode<K, V> sentinel();
 
-        /** Returns the node's successor, or the bucket's sentinel if at the end. */
         abstract QLCacheNode<K, V> traverse(QLCacheNode<K, V> node);
 
-        /** Returns the sentinel for the wheel's next bucket, or null if the wheel is exhausted. */
         abstract @Nullable QLCacheNode<K, V> goToNextBucket();
 
-        /** Returns the sentinel for the next wheel's bucket position, or null if no more wheels. */
         abstract @Nullable QLCacheNode<K, V> goToNextWheel();
     }
 
@@ -414,7 +337,6 @@ public final class TimerWheel<K, V> implements Iterable<QLCacheNode<K, V>> {
         }
     }
 
-    /** A sentinel for the doubly-linked list in the bucket. */
     static final class Sentinel<K, V> extends QLCacheNode<K, V> {
         QLCacheNode<K, V> prev;
         QLCacheNode<K, V> next;
@@ -427,28 +349,18 @@ public final class TimerWheel<K, V> implements Iterable<QLCacheNode<K, V>> {
         @Override public QLCacheNode<K, V> getPreviousInVariableOrder() {
             return prev;
         }
-        @SuppressWarnings("NullAway")
         @Override public void setPreviousInVariableOrder(@Nullable QLCacheNode<K, V> prev) {
             this.prev = prev;
         }
         @Override public QLCacheNode<K, V> getNextInVariableOrder() {
             return next;
         }
-        @SuppressWarnings("NullAway")
         @Override public void setNextInVariableOrder(@Nullable QLCacheNode<K, V> next) {
             this.next = next;
         }
 
         @Override public @Nullable K getKey() { return null; }
-//        @Override public Object getKeyReference() { throw new UnsupportedOperationException(); }
         @Override public @Nullable V getValue() { return null; }
-//        @Override public Object getValueReference() { throw new UnsupportedOperationException(); }
-//        @Override public void setValue(V value, @Nullable ReferenceQueue<V> referenceQueue) {}
-//        @Override public boolean containsValue(Object value) { return false; }
-//        @Override public boolean isAlive() { return false; }
-//        @Override public boolean isRetired() { return false; }
-//        @Override public boolean isDead() { return false; }
-//        @Override public void retire() {}
-//        @Override public void die() {}
+
     }
 }

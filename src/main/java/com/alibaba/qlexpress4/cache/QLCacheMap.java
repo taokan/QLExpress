@@ -1,7 +1,6 @@
 package com.alibaba.qlexpress4.cache;
 
 import com.google.errorprone.annotations.concurrent.GuardedBy;
-
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
@@ -141,12 +140,17 @@ public class QLCacheMap<K,V> implements ICache<K,V> {
         this.windowMaximum = windowMaximum;
     }
 
+    protected final long windowMaximum() {
+        return this.windowMaximum;
+    }
 
     protected final void setMainProtectedMaximum(long mainProtectedMaximum) {
         this.mainProtectedMaximum = mainProtectedMaximum;
     }
 
-
+    protected final long mainProtectedMaximum(){
+        return this.mainProtectedMaximum;
+    }
     protected final void setStepSize(double stepSize) {
         this.stepSize = stepSize;
     }
@@ -154,6 +158,10 @@ public class QLCacheMap<K,V> implements ICache<K,V> {
 
     protected final void setHitsInSample(int hitsInSample) {
         this.hitsInSample = hitsInSample;
+    }
+
+    protected final int hitsInSample() {
+        return hitsInSample;
     }
 
     protected final void setMissesInSample(int missesInSample) {
@@ -246,7 +254,6 @@ public class QLCacheMap<K,V> implements ICache<K,V> {
     }
 
     static int ceilingPowerOfTwo(int x) {
-        // From Hacker's Delight, Chapter 3, Harry S. Warren Jr.
         return 1 << -Integer.numberOfLeadingZeros(x - 1);
     }
 
@@ -294,6 +301,7 @@ public class QLCacheMap<K,V> implements ICache<K,V> {
         this.timerWheel = timerWheel;
     }
 
+
     @GuardedBy("evictionLock")
     public boolean admit(K candidateKey, K victimKey) {
         int victimFreq = frequencySketch().frequency(victimKey);
@@ -301,12 +309,60 @@ public class QLCacheMap<K,V> implements ICache<K,V> {
         if (candidateFreq > victimFreq) {
             return true;
         } else if (candidateFreq >= ADMIT_HASHDOS_THRESHOLD) {
-            // The maximum frequency is 15 and halved to 7 after a reset to age the history. An attack
-            // exploits that a hot candidate is rejected in favor of a hot victim. The threshold of a warm
-            // candidate reduces the number of random acceptances to minimize the impact on the hit rate.
             int random = ThreadLocalRandom.current().nextInt();
             return ((random & 127) == 0);
         }
         return false;
     }
+
+    //TODO dynamic set
+    protected void setWindowWeightedSize(long weightedSize) {
+        throw new UnsupportedOperationException();
+    }
+    protected long windowWeightedSize() {
+        throw new UnsupportedOperationException();
+    }
+    protected long mainProtectedWeightedSize() {
+        throw new UnsupportedOperationException();
+    }
+
+    @GuardedBy("evictionLock")
+    protected void setWeightedSize(long weightedSize) {
+        throw new UnsupportedOperationException();
+    }
+
+    @GuardedBy("evictionLock")
+    protected void setMainProtectedWeightedSize(long weightedSize) {
+        throw new UnsupportedOperationException();
+    }
+
+    protected boolean expiresAfterAccess() {
+        return false;
+    }
+
+    protected boolean refreshAfterWrite() {
+        return false;
+    }
+
+    public boolean isRecordingStats() {
+        return false;
+    }
+
+    protected long expiresAfterAccessNanos() {
+        throw new UnsupportedOperationException();
+    }
+
+    protected long expiresAfterWriteNanos() {
+        throw new UnsupportedOperationException();
+    }
+
+    public QLWriteOrderDeque<QLCacheNode<K, V>> writeOrderDeque() {
+        throw new UnsupportedOperationException();
+    }
+
+    public QLStatsCounter statsCounter() {
+        return new QLStatsCounter();
+    }
+
+
 }

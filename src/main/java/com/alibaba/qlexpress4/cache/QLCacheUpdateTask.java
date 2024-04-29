@@ -1,7 +1,5 @@
 package com.alibaba.qlexpress4.cache;
 
-import com.google.errorprone.annotations.concurrent.GuardedBy;
-
 import static com.alibaba.qlexpress4.cache.QLCacheMap.MAXIMUM_CAPACITY;
 
 /**
@@ -15,58 +13,58 @@ public class QLCacheUpdateTask<K,V> implements Runnable {
     final long maximum;
     final QLSegment<K,V> segment;
     final QLFrequency<K> frequency;
+    final int weightDifference;
 
-    QLCacheUpdateTask(QLCacheNode<K, V> node,QLCacheNode<K, V> oldNode, int weight, QLSegment qlSegment, QLFrequency<K> qlFrequency) {
+
+    QLCacheUpdateTask(QLCacheNode<K, V> node,QLCacheNode<K, V> oldNode, int weight, QLSegment qlSegment, QLFrequency<K> qlFrequency, int weightDifference) {
         this.weight = weight;
         this.node = node;
         this.oldNode = oldNode;
         this.maximum = qlSegment.getMaxSegmentWeight();
         this.segment = qlSegment;
         this.frequency = qlFrequency;
+        this.weightDifference = weightDifference;
     }
 
     @Override
-    @GuardedBy("evictionLock")
     @SuppressWarnings("FutureReturnValueIgnored")
     public void run() {
-        if (this.segment.getCacheV().expiresAfterWrite()) {
-            reorder(writeOrderDeque(), node);
-        } else if (this.segment.getCacheV().expiresVariable()) {
+        if (this.segment.getCacheV().expiresVariable()) {
             this.segment.getCacheV().timerWheel().reschedule(node);
         }
-        if (evicts()) {
+        if (this.segment.evicts()) {
             int oldWeightedSize = node.getPolicyWeight();
             node.setPolicyWeight(oldWeightedSize + weightDifference);
             if (node.inWindow()) {
-                setWindowWeightedSize(windowWeightedSize() + weightDifference);
+                this.segment.getCacheV().setWindowWeightedSize(this.segment.getCacheV().windowWeightedSize() + weightDifference);
                 if (node.getPolicyWeight() > maximum) {
                     this.segment.evictEntry(node, RemovalCause.SIZE, this.segment.getCacheV().expirationTicker().read());
-                } else if (node.getPolicyWeight() <= windowMaximum()) {
-                    onAccess(node);
+                } else if (node.getPolicyWeight() <= this.segment.getCacheV().windowMaximum()) {
+                    this.segment.onAccess(node);
                 } else if (this.segment.getCacheV().accessOrderWindowDeque().contains(node)) {
                     this.segment.getCacheV().accessOrderWindowDeque().moveToFront(node);
                 }
             } else if (node.inMainProbation()) {
                 if (node.getPolicyWeight() <= maximum) {
-                    onAccess(node);
+                    this.segment.onAccess(node);
                 } else {
                     this.segment.evictEntry(node, RemovalCause.SIZE, this.segment.getCacheV().expirationTicker().read());
                 }
             } else if (node.inMainProtected()) {
-                setMainProtectedWeightedSize(mainProtectedWeightedSize() + weightDifference);
+                this.segment.getCacheV().setMainProtectedWeightedSize(this.segment.getCacheV().mainProtectedWeightedSize() + weightDifference);
                 if (node.getPolicyWeight() <= maximum) {
-                    onAccess(node);
+                    this.segment.onAccess(node);
                 } else {
-                    this.segment.evictEntry(node, RemovalCause.SIZE, expirationTicker().read());
+                    this.segment.evictEntry(node, RemovalCause.SIZE, this.segment.getCacheV().expirationTicker().read());
                 }
             }
 
-            setWeightedSize(this.segment.getCacheV().weightedSize() + weightDifference);
+            this.segment.getCacheV().setWeightedSize(this.segment.getCacheV().weightedSize() + weightDifference);
             if (this.segment.getCacheV().weightedSize() > MAXIMUM_CAPACITY) {
                 this.segment.evictEntries();
             }
-        } else if (expiresAfterAccess()) {
-            onAccess(node);
+        } else if (this.segment.getCacheV().expiresAfterAccess()) {
+            this.segment.onAccess(node);
         }
     }
 }
